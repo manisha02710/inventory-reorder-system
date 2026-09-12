@@ -1,0 +1,1453 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script>
+document.getElementById('loginForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+
+    const email = document.querySelector('input[name="email"]').value;
+    const password = document.querySelector('input[name="password"]').value;
+
+    if (email && password) {
+        window.location.href = "index.html";
+    }
+});
+</script>
+    <title>Inventory Reorder Intelligence System (FastAPI)</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- FontAwesome icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .stage-active {
+            border-color: #2563eb !important;
+            color: #1d4ed8 !important;
+            background-color: #eff6ff !important;
+            font-weight: 700 !important;
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-900 min-h-screen font-sans antialiased flex flex-col">
+    
+    <!-- Toast Notification Container -->
+    <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none"></div>
+
+    <!-- Top Navigation Bar -->
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-40 shadow-xs">
+        <div class="w-full px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between gap-4">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-700 to-indigo-600 flex items-center justify-center text-white font-bold text-lg shadow-sm">
+                    <i class="fa-solid fa-boxes-stacked"></i>
+                </div>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <h1 class="text-lg font-black text-slate-800 tracking-tight">StockPredict<span class="text-blue-600">AI</span></h1>
+                        <span class="px-2 py-0.5 text-[10px] font-bold uppercase rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">INR (₹) Currency</span>
+                        <span class="px-2 py-0.5 text-[10px] font-bold uppercase rounded-full bg-blue-100 text-blue-800 border border-blue-200">4-Stage Pipeline</span>
+                    </div>
+                    <p class="text-xs text-slate-500 font-medium">Inventory Reorder Prediction & Stockout Prevention Engine</p>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-2.5">
+                <a href="/docs" target="_blank" class="text-xs font-semibold px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 transition flex items-center gap-1.5 border border-slate-200">
+                    <i class="fa-solid fa-code"></i> API Docs
+                </a>
+                <button onclick="openCreatePOModal()" class="text-xs font-bold px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white transition shadow-xs flex items-center gap-1.5">
+                    <i class="fa-solid fa-cart-flatbed"></i> Purchase Order
+                </button>
+                <button onclick="triggerPipelineRun()" id="btn-run-pipeline-top" class="text-xs font-bold px-3.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white transition shadow-xs flex items-center gap-1.5">
+                    <i class="fa-solid fa-arrows-rotate"></i> Run Pipeline
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- App Body: Left Sidebar Control Window + Main Content -->
+    <div class="flex-1 flex flex-col md:flex-row w-full max-w-[1600px] mx-auto p-4 sm:p-6 gap-6">
+
+        <!-- =================== LEFT SIDEBAR CONTROL WINDOW =================== -->
+        <aside class="w-full md:w-80 shrink-0 space-y-4">
+            
+            <!-- Control Panel Card -->
+            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+                <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                    <div class="flex items-center gap-2">
+                        <div class="w-7 h-7 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-xs">
+                            <i class="fa-solid fa-sliders"></i>
+                        </div>
+                        <h2 class="text-sm font-bold text-slate-800">Control Window</h2>
+                    </div>
+                    <span class="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                        <i class="fa-solid fa-circle text-[8px] mr-1"></i>Live
+                    </span>
+                </div>
+
+                <!-- Control 1: Active Stage Dropdown -->
+                <div class="space-y-1.5">
+                    <label class="text-[11px] font-bold uppercase tracking-wider text-slate-500">Pipeline Stage</label>
+                    <select id="left-stage-select" onchange="handleSidebarStageChange(this.value)" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 focus:ring-2 focus:ring-blue-500 focus:outline-hidden">
+                        <option value="tab-stage1">Stage 1: Stock Data Master</option>
+                        <option value="tab-stage2">Stage 2: Consumption Analytics</option>
+                        <option value="tab-stage3">Stage 3: Demand Forecasting</option>
+                        <option value="tab-stage4">Stage 4: Reorder Recommendations</option>
+                    </select>
+                </div>
+
+                <!-- Control 2: Active Product / SKU Dropdown -->
+                <div class="space-y-1.5">
+                    <label class="text-[11px] font-bold uppercase tracking-wider text-slate-500">Select Item / SKU</label>
+                    <select id="left-sku-select" onchange="handleSidebarSkuChange(this.value)" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 focus:ring-2 focus:ring-blue-500 focus:outline-hidden">
+                        <!-- Populated dynamically -->
+                    </select>
+                    <span class="text-[10px] text-slate-400 block">Synchronizes across consumption & forecast stages.</span>
+                </div>
+
+                <!-- Control 3: Category Filter Dropdown -->
+                <div class="space-y-1.5">
+                    <label class="text-[11px] font-bold uppercase tracking-wider text-slate-500">Category Filter</label>
+                    <select id="left-category-select" onchange="handleSidebarCategoryChange(this.value)" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold text-slate-700 focus:ring-2 focus:ring-blue-500 focus:outline-hidden">
+                        <option value="ALL">All Categories</option>
+                        <option value="Electronics">Electronics</option>
+                        <option value="Office">Office Supplies</option>
+                        <option value="Groceries">Groceries & Food</option>
+                    </select>
+                </div>
+
+                <!-- Control 4: Service Level Target Dropdown -->
+                <div class="space-y-1.5">
+                    <div class="flex items-center justify-between">
+                        <label class="text-[11px] font-bold uppercase tracking-wider text-slate-500">Service Level (Z)</label>
+                        <span class="text-[10px] text-blue-600 font-bold" id="left-z-label">Z = 1.65</span>
+                    </div>
+                    <select id="left-service-level-select" onchange="handleSidebarServiceLevelChange(this.value)" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 focus:ring-2 focus:ring-blue-500 focus:outline-hidden">
+                        <option value="0.90">90% Cycle Service (Z = 1.28)</option>
+                        <option value="0.95" selected>95% Cycle Service (Z = 1.65) - Rec.</option>
+                        <option value="0.98">98% Cycle Service (Z = 2.06)</option>
+                        <option value="0.99">99% Cycle Service (Z = 2.33)</option>
+                    </select>
+                    <span class="text-[10px] text-slate-400 block">Controls dynamic Safety Stock calculation.</span>
+                </div>
+
+                <!-- Control 5: Forecast Model Dropdown -->
+                <div class="space-y-1.5">
+                    <label class="text-[11px] font-bold uppercase tracking-wider text-slate-500">Forecasting Model</label>
+                    <select id="left-model-select" onchange="handleSidebarModelChange(this.value)" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold text-slate-800 focus:ring-2 focus:ring-blue-500 focus:outline-hidden">
+                        <option value="auto" selected>Auto Best-Fit (Lowest MAE)</option>
+                        <option value="moving_average">Simple Moving Average (SMA)</option>
+                        <option value="weighted_moving_average">Weighted Moving Average (WMA)</option>
+                        <option value="exponential_smoothing">Exponential Smoothing (SES)</option>
+                        <option value="linear_trend">Linear Trend Projection (OLS)</option>
+                    </select>
+                </div>
+
+                <!-- Control 6: Forecast Horizon Dropdown -->
+                <div class="space-y-1.5">
+                    <label class="text-[11px] font-bold uppercase tracking-wider text-slate-500">Forecast Horizon</label>
+                    <select id="left-horizon-select" onchange="handleSidebarHorizonChange(this.value)" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold text-slate-800 focus:ring-2 focus:ring-blue-500 focus:outline-hidden">
+                        <option value="7">Next 7 Days</option>
+                        <option value="14" selected>Next 14 Days</option>
+                        <option value="30">Next 30 Days (1 Month)</option>
+                        <option value="60">Next 60 Days (2 Months)</option>
+                    </select>
+                </div>
+
+                <!-- Primary Action Buttons -->
+                <div class="pt-2 space-y-2">
+                    <button onclick="triggerPipelineRun()" id="btn-run-pipeline-sidebar" class="w-full py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-sm transition flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-rotate"></i> Recalculate 4 Stages
+                    </button>
+                    <button onclick="openCreatePOModal()" class="w-full py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-sm transition flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-cart-shopping"></i> Review & Place PO (₹)
+                    </button>
+                </div>
+            </div>
+
+            <!-- Quick Data Management Card -->
+            <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-3 text-xs">
+                <h3 class="font-bold text-slate-700 flex items-center gap-1.5">
+                    <i class="fa-solid fa-database text-blue-600"></i> Quick Data Management
+                </h3>
+                <div class="grid grid-cols-2 gap-2">
+                    <button onclick="openAddItemModal()" class="p-2.5 rounded-xl border border-slate-200 hover:border-blue-300 hover:bg-blue-50/40 text-slate-700 font-semibold transition text-center flex flex-col items-center gap-1">
+                        <i class="fa-solid fa-plus text-blue-600"></i>
+                        <span>New SKU</span>
+                    </button>
+                    <button onclick="openLogSaleModal()" class="p-2.5 rounded-xl border border-slate-200 hover:border-indigo-300 hover:bg-indigo-50/40 text-slate-700 font-semibold transition text-center flex flex-col items-center gap-1">
+                        <i class="fa-solid fa-cash-register text-indigo-600"></i>
+                        <span>Log Sale</span>
+                    </button>
+                    <a href="/api/v1/stock/template-csv" class="p-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 font-semibold transition text-center flex flex-col items-center gap-1">
+                        <i class="fa-solid fa-file-csv text-slate-600"></i>
+                        <span>Items CSV</span>
+                    </a>
+                    <a href="/api/v1/consumption/template-csv" class="p-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 font-semibold transition text-center flex flex-col items-center gap-1">
+                        <i class="fa-solid fa-file-csv text-slate-600"></i>
+                        <span>Sales CSV</span>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Currency & Financial Summary Widget (INR ₹) -->
+            <div class="bg-gradient-to-br from-slate-900 to-blue-950 text-white p-5 rounded-2xl shadow-md space-y-3">
+                <div class="flex items-center justify-between text-xs text-slate-300 font-semibold">
+                    <span>Valuation Summary</span>
+                    <span class="bg-blue-500/20 text-blue-300 px-2 py-0.5 rounded text-[10px] font-bold uppercase">INR (₹)</span>
+                </div>
+                <div>
+                    <span class="text-[11px] text-slate-400 uppercase tracking-wider block">Total Inventory Value</span>
+                    <div class="text-2xl font-black text-white mt-0.5" id="sidebar-total-valuation">₹0</div>
+                </div>
+                <div class="border-t border-slate-800 pt-2.5 flex items-center justify-between">
+                    <div>
+                        <span class="text-[10px] text-slate-400 block uppercase">Reorder Budget Needed</span>
+                        <span class="text-sm font-bold text-emerald-400" id="sidebar-reorder-budget">₹0</span>
+                    </div>
+                    <div>
+                        <span class="text-[10px] text-slate-400 block uppercase">Stockout Risk</span>
+                        <span class="text-sm font-bold text-red-400" id="sidebar-critical-count">0 items</span>
+                    </div>
+                </div>
+            </div>
+
+        </aside>
+
+        <!-- =================== MAIN CONTENT AREA =================== -->
+        <div class="flex-1 space-y-5 min-w-0">
+
+            <!-- KPI Metric Cards (Formatted in INR ₹) -->
+            <section class="grid grid-cols-2 lg:grid-cols-5 gap-3.5">
+                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
+                    <span class="text-[11px] text-slate-500 font-bold uppercase tracking-wider block">Total Items</span>
+                    <h3 class="text-2xl font-black text-slate-800 mt-1" id="kpi-total-items">-</h3>
+                    <span class="text-[10px] text-slate-400">Inventory master</span>
+                </div>
+
+                <div class="bg-white p-4 rounded-xl border border-red-200 bg-red-50/30 shadow-xs">
+                    <span class="text-[11px] text-red-600 font-bold uppercase tracking-wider block">Critical Risk</span>
+                    <h3 class="text-2xl font-black text-red-700 mt-1" id="kpi-critical">-</h3>
+                    <span class="text-[10px] text-red-500">Stockout imminent</span>
+                </div>
+
+                <div class="bg-white p-4 rounded-xl border border-orange-200 bg-orange-50/30 shadow-xs">
+                    <span class="text-[11px] text-orange-600 font-bold uppercase tracking-wider block">Reorder Now</span>
+                    <h3 class="text-2xl font-black text-orange-700 mt-1" id="kpi-reorder-now">-</h3>
+                    <span class="text-[10px] text-orange-500">Breached ROP</span>
+                </div>
+
+                <div class="bg-white p-4 rounded-xl border border-emerald-200 bg-emerald-50/30 shadow-xs">
+                    <span class="text-[11px] text-emerald-600 font-bold uppercase tracking-wider block">Healthy Stock</span>
+                    <h3 class="text-2xl font-black text-emerald-700 mt-1" id="kpi-healthy">-</h3>
+                    <span class="text-[10px] text-emerald-600">Adequate supply</span>
+                </div>
+
+                <div class="col-span-2 sm:col-span-1 bg-white p-4 rounded-xl border border-blue-200 bg-blue-50/30 shadow-xs">
+                    <span class="text-[11px] text-blue-600 font-bold uppercase tracking-wider block">Reorder Budget (₹)</span>
+                    <h3 class="text-xl font-black text-blue-700 mt-1 truncate" id="kpi-investment">₹0</h3>
+                    <span class="text-[10px] text-blue-500">Required capital</span>
+                </div>
+            </section>
+
+            <!-- Stage Navigation Pills -->
+            <div class="flex items-center border border-slate-200 bg-white rounded-xl shadow-xs p-1 gap-1 overflow-x-auto">
+                
+                <button onclick="switchTab('tab-stage1')" id="tab-btn-stage1" class="flex-1 min-w-[150px] py-2.5 px-3 rounded-lg text-xs font-semibold transition flex items-center justify-center gap-1.5 text-slate-600 hover:bg-slate-50 border border-transparent">
+                    <span class="w-5 h-5 rounded-full bg-slate-200 text-slate-700 text-[10px] flex items-center justify-center font-bold">1</span>
+                    Stock Master
+                </button>
+                <button onclick="switchTab('tab-stage2')" id="tab-btn-stage2" class="flex-1 min-w-[170px] py-2.5 px-3 rounded-lg text-xs font-semibold transition flex items-center justify-center gap-1.5 text-slate-600 hover:bg-slate-50 border border-transparent">
+                    <span class="w-5 h-5 rounded-full bg-slate-200 text-slate-700 text-[10px] flex items-center justify-center font-bold">2</span>
+                    Consumption Outflows
+                </button>
+                <button onclick="switchTab('tab-stage3')" id="tab-btn-stage3" class="flex-1 min-w-[150px] py-2.5 px-3 rounded-lg text-xs font-semibold transition flex items-center justify-center gap-1.5 text-slate-600 hover:bg-slate-50 border border-transparent">
+                    <span class="w-5 h-5 rounded-full bg-slate-200 text-slate-700 text-[10px] flex items-center justify-center font-bold">3</span>
+                    Demand Forecasts
+                </button>
+                <button onclick="switchTab('tab-stage4')" id="tab-btn-stage4" class="flex-1 min-w-[170px] py-2.5 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 stage-active border border-transparent">
+                    <span class="w-5 h-5 rounded-full bg-blue-600 text-white text-[10px] flex items-center justify-center font-bold">4</span>
+                    Reorder Decisions
+                </button>
+            </div>
+
+            <!-- =================== STAGE 4: REORDER RECOMMENDATIONS (DEFAULT) =================== -->
+            <div id="tab-stage4" class="space-y-4">
+                <div class="bg-white p-4 sm:p-5 rounded-xl border border-slate-200 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div>
+                        <h2 class="text-base font-bold text-slate-800 flex items-center gap-2">
+                            <span>Stage 4: Automated Reorder Recommendations</span>
+                            <span class="text-[11px] font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200">Dynamic ROP, SS & EOQ</span>
+                        </h2>
+                        <p class="text-xs text-slate-500 mt-0.5">Replenishment decisions calculated from on-hand stock, supplier lead times, and forecasted demand.</p>
+                    </div>
+                    <div class="flex items-center gap-1 bg-slate-100 p-1 rounded-lg text-xs self-start sm:self-auto">
+                        <button onclick="filterRecommendations('ALL')" class="px-2.5 py-1 rounded font-bold bg-white shadow-xs filter-btn" data-filter="ALL">All</button>
+                        <button onclick="filterRecommendations('CRITICAL')" class="px-2.5 py-1 rounded font-medium text-red-600 filter-btn" data-filter="CRITICAL">Critical</button>
+                        <button onclick="filterRecommendations('REORDER_NOW')" class="px-2.5 py-1 rounded font-medium text-orange-600 filter-btn" data-filter="REORDER_NOW">Reorder Now</button>
+                        <button onclick="filterRecommendations('REORDER_SOON')" class="px-2.5 py-1 rounded font-medium text-yellow-700 filter-btn" data-filter="REORDER_SOON">Soon</button>
+                        <button onclick="filterRecommendations('HEALTHY')" class="px-2.5 py-1 rounded font-medium text-emerald-600 filter-btn" data-filter="HEALTHY">Healthy</button>
+                        <button onclick="filterRecommendations('OVERSTOCK')" class="px-2.5 py-1 rounded font-medium text-purple-600 filter-btn" data-filter="OVERSTOCK">Overstock</button>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-xl border border-slate-200 shadow-xs overflow-x-auto">
+                    <table class="w-full text-left text-sm">
+                        <thead class="bg-slate-50 border-b border-slate-200 text-[11px] uppercase font-bold text-slate-600 tracking-wider">
+                            <tr>
+                                <th class="py-3.5 px-4">Urgency Status</th>
+                                <th class="py-3.5 px-4">SKU / Product</th>
+                                <th class="py-3.5 px-4">Current Stock</th>
+                                <th class="py-3.5 px-4">Daily Demand</th>
+                                <th class="py-3.5 px-4">Lead Time</th>
+                                <th class="py-3.5 px-4">Safety Stock</th>
+                                <th class="py-3.5 px-4">Reorder Point</th>
+                                <th class="py-3.5 px-4">EOQ</th>
+                                <th class="py-3.5 px-4 font-bold text-blue-600">Recommended Order</th>
+                                <th class="py-3.5 px-4 font-bold text-slate-800">Est. Cost (₹)</th>
+                                <th class="py-3.5 px-4 text-center">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="recommendations-tbody" class="divide-y divide-slate-100">
+                            <tr>
+                                <td colspan="11" class="py-8 text-center text-slate-400">Loading recommendations...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- =================== STAGE 1: STOCK DATA MASTER =================== -->
+            <div id="tab-stage1" class="space-y-4 hidden">
+                <div class="bg-white p-4 sm:p-5 rounded-xl border border-slate-200 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div>
+                        <h2 class="text-base font-bold text-slate-800 flex items-center gap-2">
+                            <span>Stage 1: Inventory Master & Stock Levels</span>
+                            <span class="text-[11px] font-semibold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md">Catalog & Thresholds</span>
+                        </h2>
+                        <p class="text-xs text-slate-500 mt-0.5">SKU catalog, lead times, replenishment holding rates, and physical stock audits.</p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <div class="relative">
+                            <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-xs text-slate-400"></i>
+                            <input type="text" id="stock-search-input" onkeyup="searchStockTable()" placeholder="Filter items..." class="pl-8 pr-3 py-1.5 border border-slate-200 rounded-lg text-xs w-44 focus:outline-hidden focus:ring-1 focus:ring-blue-500">
+                        </div>
+                        <button onclick="openAddItemModal()" class="text-xs font-bold px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white transition flex items-center gap-1 shadow-xs">
+                            <i class="fa-solid fa-plus"></i> Add Item
+                        </button>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-xl border border-slate-200 shadow-xs overflow-x-auto">
+                    <table class="w-full text-left text-sm" id="stock-table">
+                        <thead class="bg-slate-50 border-b border-slate-200 text-[11px] uppercase font-bold text-slate-600 tracking-wider">
+                            <tr>
+                                <th class="py-3.5 px-4">SKU</th>
+                                <th class="py-3.5 px-4">Item Name</th>
+                                <th class="py-3.5 px-4">Category</th>
+                                <th class="py-3.5 px-4">Stock Level</th>
+                                <th class="py-3.5 px-4">Min / Max</th>
+                                <th class="py-3.5 px-4">Lead Time</th>
+                                <th class="py-3.5 px-4">Unit Cost (₹)</th>
+                                <th class="py-3.5 px-4">Holding / Order Cost (₹)</th>
+                                <th class="py-3.5 px-4">Inventory Value (₹)</th>
+                                <th class="py-3.5 px-4 text-center">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="stock-tbody" class="divide-y divide-slate-100">
+                            <tr>
+                                <td colspan="10" class="py-8 text-center text-slate-400">Loading inventory items...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- =================== STAGE 2: CONSUMPTION ANALYTICS =================== -->
+            <div id="tab-stage2" class="space-y-4 hidden">
+                <div class="bg-white p-4 sm:p-5 rounded-xl border border-slate-200 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div>
+                        <h2 class="text-base font-bold text-slate-800 flex items-center gap-2">
+                            <span>Stage 2: Historical Consumption & Demand Analytics</span>
+                            <span class="text-[11px] font-semibold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-200">Outflow Volatility</span>
+                        </h2>
+                        <p class="text-xs text-slate-500 mt-0.5">Chronological sales history, daily demand variance, standard deviation, and volatility indexing.</p>
+                    </div>
+                    <button onclick="openLogSaleModal()" class="text-xs font-bold px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white transition flex items-center gap-1 shadow-xs self-start sm:self-auto">
+                        <i class="fa-solid fa-cash-register"></i> Log Sale Outflow
+                    </button>
+                </div>
+
+                <!-- Consumption Statistics Grid -->
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
+                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
+                        <span class="text-[11px] text-slate-500 font-bold uppercase tracking-wider block">Average Daily Demand (&mu;)</span>
+                        <h4 class="text-2xl font-black text-slate-800 mt-1" id="s2-mean-demand">-</h4>
+                        <span class="text-[10px] text-slate-400">Units consumed / day</span>
+                    </div>
+                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
+                        <span class="text-[11px] text-slate-500 font-bold uppercase tracking-wider block">Demand Std. Dev (&sigma;)</span>
+                        <h4 class="text-2xl font-black text-slate-800 mt-1" id="s2-std-demand">-</h4>
+                        <span class="text-[10px] text-slate-400">Demand variation</span>
+                    </div>
+                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
+                        <span class="text-[11px] text-slate-500 font-bold uppercase tracking-wider block">Volatility Index (CV)</span>
+                        <h4 class="text-2xl font-black text-slate-800 mt-1" id="s2-cv-demand">-</h4>
+                        <span class="text-[10px] text-slate-400" id="s2-cv-label">&sigma; / &mu; ratio</span>
+                    </div>
+                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
+                        <span class="text-[11px] text-slate-500 font-bold uppercase tracking-wider block">History Window</span>
+                        <h4 class="text-2xl font-black text-blue-600 mt-1" id="s2-window-demand">90 Days</h4>
+                        <span class="text-[10px] text-slate-400">Continuous daily series</span>
+                    </div>
+                </div>
+
+                <!-- Consumption Chart & Transactions -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                    <div class="lg:col-span-2 bg-white p-5 rounded-xl border border-slate-200 shadow-xs">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-sm font-bold text-slate-800">Daily Demand Outflow (Past 30 Days)</h3>
+                            <span class="text-xs font-semibold px-2.5 py-1 rounded bg-blue-50 text-blue-700 border border-blue-200" id="consumption-total-label">Total Outflows: -</span>
+                        </div>
+                        <div class="h-72">
+                            <canvas id="consumptionChart"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-xs flex flex-col">
+                        <h3 class="text-sm font-bold text-slate-800 mb-3 flex items-center justify-between">
+                            <span>Recent Sales History</span>
+                            <span class="text-[11px] text-slate-400 font-normal">Latest 8 entries</span>
+                        </h3>
+                        <div class="overflow-y-auto max-h-72 divide-y divide-slate-100 flex-1" id="recent-transactions-list">
+                            <p class="text-xs text-slate-400 text-center py-6">Select an item to view records.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- =================== STAGE 3: DEMAND FORECASTING =================== -->
+            <div id="tab-stage3" class="space-y-4 hidden">
+                <div class="bg-white p-4 sm:p-5 rounded-xl border border-slate-200 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div>
+                        <h2 class="text-base font-bold text-slate-800 flex items-center gap-2">
+                            <span>Stage 3: Demand Forecasting Engine</span>
+                            <span class="text-[11px] font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200">Time-Series AI</span>
+                        </h2>
+                        <p class="text-xs text-slate-500 mt-0.5">Moving Average, Exponential Smoothing, and Trend Projections with automatic lowest MAE selection.</p>
+                    </div>
+                    <button onclick="runForecastView()" class="text-xs font-bold px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white transition flex items-center gap-1 shadow-xs self-start sm:self-auto">
+                        <i class="fa-solid fa-chart-line"></i> Re-Forecast
+                    </button>
+                </div>
+
+                <!-- Forecast Metrics Grid -->
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
+                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
+                        <span class="text-[11px] text-slate-500 font-bold uppercase tracking-wider block">Model Selected</span>
+                        <h4 class="text-lg font-black text-blue-600 mt-1 truncate" id="f-model-used">-</h4>
+                        <span class="text-[10px] text-slate-400">Validated best fit</span>
+                    </div>
+                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
+                        <span class="text-[11px] text-slate-500 font-bold uppercase tracking-wider block">Mean Abs. Error (MAE)</span>
+                        <h4 class="text-2xl font-black text-slate-800 mt-1" id="f-mae">-</h4>
+                        <span class="text-[10px] text-slate-400">Accuracy score</span>
+                    </div>
+                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
+                        <span class="text-[11px] text-slate-500 font-bold uppercase tracking-wider block">RMSE</span>
+                        <h4 class="text-2xl font-black text-slate-800 mt-1" id="f-rmse">-</h4>
+                        <span class="text-[10px] text-slate-400">Squared error metric</span>
+                    </div>
+                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
+                        <span class="text-[11px] text-slate-500 font-bold uppercase tracking-wider block">Forecast Daily Run-Rate</span>
+                        <h4 class="text-2xl font-black text-emerald-600 mt-1" id="f-daily-mean">-</h4>
+                        <span class="text-[10px] text-slate-400">Expected units / day</span>
+                    </div>
+                </div>
+
+                <!-- Forecast Unified Chart -->
+                <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-xs">
+                    <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
+                        <div>
+                            <h3 class="text-sm font-bold text-slate-800">Demand Timeline: Historical Actuals &rarr; Predicted Future Demand</h3>
+                            <p class="text-xs text-slate-500">Includes 95% Confidence Interval band (shaded upper and lower error bounds).</p>
+                        </div>
+                        <span class="text-xs font-bold px-3 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-200" id="forecast-total-demand">Total Forecast: -</span>
+                    </div>
+                    <div class="h-80">
+                        <canvas id="forecastChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Candidate Model Comparison Table -->
+                <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-xs">
+                    <h3 class="text-sm font-bold text-slate-800 mb-1.5">Candidate Models Accuracy Comparison (MAE)</h3>
+                    <p class="text-xs text-slate-500 mb-3">Model with lowest Mean Absolute Error is automatically chosen for highest replenishment accuracy.</p>
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3" id="model-comparison-grid">
+                        <!-- Populated dynamically -->
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- =================== MODALS & DIALOGS =================== -->
+
+    <!-- Modal 1: Add New SKU -->
+    <div id="addItemModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs hidden z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4 border border-slate-100">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                <div class="flex items-center gap-2">
+                    <div class="w-7 h-7 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-xs">1</div>
+                    <h3 class="font-bold text-base text-slate-800">Add Inventory SKU</h3>
+                </div>
+                <button onclick="closeAddItemModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <form id="addItemForm" onsubmit="handleCreateItem(event)" class="space-y-3">
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="text-xs font-bold text-slate-600">SKU Code *</label>
+                        <input type="text" id="m_sku" required class="w-full border border-slate-200 rounded-lg p-2 text-sm focus:ring-1 focus:ring-blue-500" placeholder="ELEC-2001">
+                    </div>
+                    <div>
+                        <label class="text-xs font-bold text-slate-600">Category</label>
+                        <input type="text" id="m_category" class="w-full border border-slate-200 rounded-lg p-2 text-sm focus:ring-1 focus:ring-blue-500" placeholder="Electronics">
+                    </div>
+                </div>
+                <div>
+                    <label class="text-xs font-bold text-slate-600">Product Name *</label>
+                    <input type="text" id="m_name" required class="w-full border border-slate-200 rounded-lg p-2 text-sm focus:ring-1 focus:ring-blue-500" placeholder="Item description / name">
+                </div>
+                <div class="grid grid-cols-3 gap-3">
+                    <div>
+                        <label class="text-xs font-bold text-slate-600">Initial Stock</label>
+                        <input type="number" id="m_stock" required min="0" value="50" class="w-full border border-slate-200 rounded-lg p-2 text-sm">
+                    </div>
+                    <div>
+                        <label class="text-xs font-bold text-slate-600">Min Stock</label>
+                        <input type="number" id="m_min_stock" min="0" value="15" class="w-full border border-slate-200 rounded-lg p-2 text-sm">
+                    </div>
+                    <div>
+                        <label class="text-xs font-bold text-slate-600">Max Stock</label>
+                        <input type="number" id="m_max_stock" min="1" value="500" class="w-full border border-slate-200 rounded-lg p-2 text-sm">
+                    </div>
+                </div>
+                <div class="grid grid-cols-3 gap-3">
+                    <div>
+                        <label class="text-xs font-bold text-slate-600">Lead Time (Days)</label>
+                        <input type="number" id="m_lead_time" min="1" value="7" class="w-full border border-slate-200 rounded-lg p-2 text-sm">
+                    </div>
+                    <div>
+                        <label class="text-xs font-bold text-slate-600">Unit Cost (₹) *</label>
+                        <input type="number" step="0.01" id="m_unit_cost" min="0.01" value="1499.00" class="w-full border border-slate-200 rounded-lg p-2 text-sm font-semibold">
+                    </div>
+                    <div>
+                        <label class="text-xs font-bold text-slate-600">Order Cost S (₹)</label>
+                        <input type="number" step="0.01" id="m_order_cost" min="0" value="250.00" class="w-full border border-slate-200 rounded-lg p-2 text-sm">
+                    </div>
+                </div>
+                <div class="pt-3 flex justify-end gap-2 border-t border-slate-100">
+                    <button type="button" onclick="closeAddItemModal()" class="px-4 py-2 text-xs font-semibold rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200">Cancel</button>
+                    <button type="submit" class="px-4 py-2 text-xs font-bold rounded-lg bg-blue-600 text-white hover:bg-blue-700 shadow-xs">Save Item</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal 2: Stock Adjustment -->
+    <div id="adjustStockModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs hidden z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl space-y-4 border border-slate-100">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                <h3 class="font-bold text-base text-slate-800">Quick Stock Adjustment</h3>
+                <button onclick="closeAdjustModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <form id="adjustStockForm" onsubmit="handleAdjustStock(event)" class="space-y-3">
+                <input type="hidden" id="adj_item_id">
+                <p class="text-xs text-slate-600 font-semibold" id="adj_item_label">Item: -</p>
+                <div>
+                    <label class="text-xs font-bold text-slate-600">Quantity Change</label>
+                    <input type="number" id="adj_quantity" required class="w-full border border-slate-200 rounded-lg p-2 text-sm focus:ring-1 focus:ring-blue-500" placeholder="+50 (restock) or -5 (damaged)">
+                    <span class="text-[10px] text-slate-400 block mt-1">Positive number adds stock; negative deducts.</span>
+                </div>
+                <div>
+                    <label class="text-xs font-bold text-slate-600">Reason</label>
+                    <select id="adj_reason" class="w-full border border-slate-200 rounded-lg p-2 text-sm">
+                        <option value="restock">Shipment Restock</option>
+                        <option value="audit">Physical Inventory Audit</option>
+                        <option value="damaged">Damaged / Expired</option>
+                        <option value="return">Customer Return</option>
+                    </select>
+                </div>
+                <div class="pt-3 flex justify-end gap-2 border-t border-slate-100">
+                    <button type="button" onclick="closeAdjustModal()" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-100 text-slate-700">Cancel</button>
+                    <button type="submit" class="px-4 py-1.5 text-xs font-bold rounded-lg bg-blue-600 text-white hover:bg-blue-700">Apply Adjustment</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal 3: Log Single Sale / Outflow -->
+    <div id="logSaleModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs hidden z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl space-y-4 border border-slate-100">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                <h3 class="font-bold text-base text-slate-800">Log Sales Outflow</h3>
+                <button onclick="closeLogSaleModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <form id="logSaleForm" onsubmit="handleLogSale(event)" class="space-y-3">
+                <div>
+                    <label class="text-xs font-bold text-slate-600">Date</label>
+                    <input type="date" id="sale_date" required class="w-full border border-slate-200 rounded-lg p-2 text-sm">
+                </div>
+                <div>
+                    <label class="text-xs font-bold text-slate-600">Quantity Sold / Consumed</label>
+                    <input type="number" id="sale_quantity" required min="1" value="10" class="w-full border border-slate-200 rounded-lg p-2 text-sm">
+                </div>
+                <div>
+                    <label class="text-xs font-bold text-slate-600">Channel</label>
+                    <select id="sale_channel" class="w-full border border-slate-200 rounded-lg p-2 text-sm">
+                        <option value="Direct Sales">Direct Sales</option>
+                        <option value="E-Commerce">E-Commerce Web</option>
+                        <option value="Retail Store">Retail Storefront</option>
+                        <option value="Wholesale">Wholesale / B2B</option>
+                        <option value="Internal">Internal Department</option>
+                    </select>
+                </div>
+                <div class="pt-3 flex justify-end gap-2 border-t border-slate-100">
+                    <button type="button" onclick="closeLogSaleModal()" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-100 text-slate-700">Cancel</button>
+                    <button type="submit" class="px-4 py-1.5 text-xs font-bold rounded-lg bg-indigo-600 text-white hover:bg-indigo-700">Record Outflow</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal 4: Reorder Formula Math Breakdown -->
+    <div id="mathModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs hidden z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4 border border-slate-100">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                <div>
+                    <h3 class="font-bold text-base text-slate-800" id="math-sku-title">Formula Breakdown: SKU</h3>
+                    <p class="text-xs text-slate-500">Step-by-step scientific inventory mathematics in Indian Rupees (₹)</p>
+                </div>
+                <button onclick="closeMathModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <div class="space-y-3 text-xs text-slate-700" id="math-content">
+                <!-- Populated dynamically -->
+            </div>
+            <div class="pt-3 flex justify-end border-t border-slate-100">
+                <button onclick="closeMathModal()" class="px-4 py-1.5 text-xs font-semibold rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal 5: Purchase Order Generator (INR ₹) -->
+    <div id="createPOModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs hidden z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl space-y-4 border border-slate-100">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                <div>
+                    <h3 class="font-bold text-lg text-slate-800">Generate Purchase Order (Stage 4)</h3>
+                    <p class="text-xs text-slate-500">Replenishment items priced in Indian Rupees (₹)</p>
+                </div>
+                <button onclick="closeCreatePOModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            
+            <div class="max-h-64 overflow-y-auto divide-y divide-slate-100 border border-slate-200 rounded-xl" id="po-items-preview">
+                <!-- Populated dynamically -->
+            </div>
+
+            <div class="flex items-center justify-between bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+                <span class="text-xs font-bold text-slate-600">Total Purchase Order Value:</span>
+                <span class="text-xl font-black text-blue-700" id="po-total-cost">₹0.00</span>
+            </div>
+
+            <div class="flex items-center gap-2">
+                <input type="checkbox" id="po-fulfill-checkbox" checked class="rounded text-blue-600 focus:ring-blue-500">
+                <label for="po-fulfill-checkbox" class="text-xs text-slate-700 font-medium">
+                    Simulate immediate fulfillment (Auto-restock inventory levels on approval)
+                </label>
+            </div>
+
+            <div class="pt-3 flex justify-end gap-2 border-t border-slate-100">
+                <button type="button" onclick="closeCreatePOModal()" class="px-4 py-2 text-xs font-semibold rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200">Cancel</button>
+                <button type="button" onclick="submitPurchaseOrder()" class="px-5 py-2 text-xs font-bold rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs">
+                    <i class="fa-solid fa-check mr-1"></i> Approve & Place Order
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Frontend Application Logic -->
+    <script>
+        let allItems = [];
+        let allRecommendations = [];
+        let consumptionChartInstance = null;
+        let forecastChartInstance = null;
+        let activeFilter = 'ALL';
+        let currentSelectedItemId = null;
+
+        // Indian Rupee (INR) Formatter
+        function formatINR(amount) {
+            if (amount === null || amount === undefined || isNaN(amount)) return '₹0';
+            return new Intl.NumberFormat('en-IN', {
+                style: 'currency',
+                currency: 'INR',
+                maximumFractionDigits: 2
+            }).format(amount);
+        }
+
+        // Toast notifications
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            const bg = type === 'success' ? 'bg-emerald-600' : type === 'error' ? 'bg-red-600' : 'bg-blue-600';
+            const icon = type === 'success' ? 'fa-circle-check' : type === 'error' ? 'fa-circle-exclamation' : 'fa-circle-info';
+            
+            toast.className = `${bg} text-white p-3.5 rounded-xl shadow-lg flex items-center gap-3 text-xs font-medium pointer-events-auto transform transition duration-300 translate-y-2 opacity-0`;
+            toast.innerHTML = `<i class="fa-solid ${icon} text-base"></i><span class="flex-1">${message}</span>`;
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.classList.remove('translate-y-2', 'opacity-0');
+            }, 10);
+
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-2');
+                setTimeout(() => toast.remove(), 300);
+            }, 4000);
+        }
+
+        // Initialize dashboard on load
+        document.addEventListener('DOMContentLoaded', async () => {
+            document.getElementById('sale_date').value = new Date().toISOString().split('T')[0];
+            await loadAllItems();
+            await triggerPipelineRun();
+        });
+
+        // Tab Switcher
+        function switchTab(tabId) {
+            ['tab-stage4', 'tab-stage1', 'tab-stage2', 'tab-stage3'].forEach(id => {
+                const el = document.getElementById(id);
+                const btn = document.getElementById('tab-btn-' + id.replace('tab-', ''));
+                if (id === tabId) {
+                    el.classList.remove('hidden');
+                    btn.classList.add('stage-active');
+                    btn.classList.remove('text-slate-600');
+                } else {
+                    el.classList.add('hidden');
+                    btn.classList.remove('stage-active');
+                    btn.classList.add('text-slate-600');
+                }
+            });
+
+            // Keep left sidebar dropdown in sync
+            document.getElementById('left-stage-select').value = tabId;
+
+            if (tabId === 'tab-stage2') loadConsumptionView();
+            else if (tabId === 'tab-stage3') runForecastView();
+        }
+
+        // Sidebar Control Handlers
+        function handleSidebarStageChange(tabId) {
+            switchTab(tabId);
+        }
+
+        function handleSidebarSkuChange(itemId) {
+            currentSelectedItemId = itemId;
+            const currentTab = document.getElementById('left-stage-select').value;
+            if (currentTab === 'tab-stage2') loadConsumptionView();
+            else if (currentTab === 'tab-stage3') runForecastView();
+        }
+
+        function handleSidebarCategoryChange(category) {
+            const rows = document.querySelectorAll('#stock-tbody tr');
+            rows.forEach(r => {
+                if (category === 'ALL') {
+                    r.style.display = '';
+                } else {
+                    const catCell = r.children[2]?.textContent || '';
+                    r.style.display = catCell.includes(category) ? '' : 'none';
+                }
+            });
+        }
+
+        function handleSidebarServiceLevelChange(val) {
+            const zMap = {'0.90': '1.28', '0.95': '1.65', '0.98': '2.06', '0.99': '2.33'};
+            document.getElementById('left-z-label').textContent = `Z = ${zMap[val] || '1.65'}`;
+            triggerPipelineRun();
+        }
+
+        function handleSidebarModelChange(val) {
+            const currentTab = document.getElementById('left-stage-select').value;
+            if (currentTab === 'tab-stage3') runForecastView();
+        }
+
+        function handleSidebarHorizonChange(val) {
+            const currentTab = document.getElementById('left-stage-select').value;
+            if (currentTab === 'tab-stage3') runForecastView();
+        }
+
+        // Load All Items from API
+        async function loadAllItems() {
+            try {
+                const res = await fetch('/api/v1/stock/items');
+                allItems = await res.json();
+                populateItemDropdowns();
+                renderStockTable();
+                updateFinancialWidgets();
+            } catch (err) {
+                showToast("Failed to load inventory items: " + err.message, "error");
+            }
+        }
+
+        function populateItemDropdowns() {
+            const leftSelect = document.getElementById('left-sku-select');
+            const prevVal = leftSelect.value;
+            leftSelect.innerHTML = '';
+
+            allItems.forEach(item => {
+                const opt = document.createElement('option');
+                opt.value = item.id;
+                opt.textContent = `${item.sku} - ${item.name} (${item.current_stock} in stock)`;
+                leftSelect.appendChild(opt);
+            });
+
+            if (prevVal && allItems.some(i => i.id == prevVal)) {
+                leftSelect.value = prevVal;
+                currentSelectedItemId = prevVal;
+            } else if (allItems.length > 0) {
+                currentSelectedItemId = allItems[0].id;
+                leftSelect.value = currentSelectedItemId;
+            }
+        }
+
+        function updateFinancialWidgets() {
+            let totalVal = 0;
+            allItems.forEach(item => {
+                totalVal += (item.current_stock * item.unit_cost);
+            });
+            document.getElementById('sidebar-total-valuation').textContent = formatINR(totalVal);
+        }
+
+        // Trigger Full Pipeline Run
+        async function triggerPipelineRun() {
+            const btnTop = document.getElementById('btn-run-pipeline-top');
+            const btnSide = document.getElementById('btn-run-pipeline-sidebar');
+            btnTop.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Running...`;
+            btnSide.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Calculating...`;
+            btnTop.disabled = true;
+            btnSide.disabled = true;
+
+            const serviceLevel = parseFloat(document.getElementById('left-service-level-select').value);
+
+            try {
+                const res = await fetch('/api/v1/pipeline/run', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({service_level: serviceLevel})
+                });
+                const data = await res.json();
+                allRecommendations = data.recommendations;
+
+                // Update KPIs in INR
+                document.getElementById('kpi-total-items').textContent = data.total_items_analyzed;
+                document.getElementById('kpi-critical').textContent = data.critical_items_count;
+                document.getElementById('kpi-reorder-now').textContent = data.reorder_now_count;
+                document.getElementById('kpi-healthy').textContent = data.healthy_count;
+                document.getElementById('kpi-investment').textContent = formatINR(data.total_estimated_reorder_investment);
+
+                // Update Sidebar widget
+                document.getElementById('sidebar-reorder-budget').textContent = formatINR(data.total_estimated_reorder_investment);
+                document.getElementById('sidebar-critical-count').textContent = `${data.critical_items_count} items`;
+
+                renderRecommendationsTable();
+                await loadAllItems();
+                showToast(`4-Stage pipeline calculated for ${data.total_items_analyzed} items in INR (₹).`);
+            } catch (err) {
+                showToast("Error running pipeline: " + err.message, "error");
+            } finally {
+                btnTop.innerHTML = `<i class="fa-solid fa-arrows-rotate"></i> Run Pipeline`;
+                btnSide.innerHTML = `<i class="fa-solid fa-rotate"></i> Recalculate 4 Stages`;
+                btnTop.disabled = false;
+                btnSide.disabled = false;
+            }
+        }
+
+        function filterRecommendations(filter) {
+            activeFilter = filter;
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                if (btn.dataset.filter === filter) {
+                    btn.classList.add('bg-white', 'shadow-xs', 'font-bold');
+                } else {
+                    btn.classList.remove('bg-white', 'shadow-xs', 'font-bold');
+                }
+            });
+            renderRecommendationsTable();
+        }
+
+        function renderRecommendationsTable() {
+            const tbody = document.getElementById('recommendations-tbody');
+            let items = allRecommendations;
+
+            if (activeFilter !== 'ALL') {
+                items = items.filter(r => r.urgency_status === activeFilter);
+            }
+
+            if (items.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="11" class="py-8 text-center text-slate-400">No items match the current filter.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = items.map(r => {
+                let badgeClass = 'bg-slate-100 text-slate-700';
+                if (r.urgency_status === 'CRITICAL') badgeClass = 'bg-red-100 text-red-700 font-bold border border-red-200';
+                else if (r.urgency_status === 'REORDER_NOW') badgeClass = 'bg-orange-100 text-orange-700 font-bold border border-orange-200';
+                else if (r.urgency_status === 'REORDER_SOON') badgeClass = 'bg-yellow-100 text-yellow-800 border border-yellow-200';
+                else if (r.urgency_status === 'HEALTHY') badgeClass = 'bg-emerald-100 text-emerald-700 border border-emerald-200';
+                else if (r.urgency_status === 'OVERSTOCK') badgeClass = 'bg-purple-100 text-purple-700 border border-purple-200';
+
+                return `
+                    <tr class="hover:bg-slate-50/80 transition">
+                        <td class="py-3.5 px-4">
+                            <span class="px-2.5 py-1 rounded-full text-[11px] ${badgeClass} inline-flex items-center gap-1">
+                                <span class="w-1.5 h-1.5 rounded-full ${r.urgency_status === 'CRITICAL' ? 'bg-red-600 animate-ping' : 'bg-current'}"></span>
+                                ${r.urgency_status.replace('_', ' ')}
+                            </span>
+                        </td>
+                        <td class="py-3.5 px-4">
+                            <div class="font-bold text-slate-800">${r.sku}</div>
+                            <div class="text-xs text-slate-500 truncate max-w-[200px]">${r.item_name}</div>
+                        </td>
+                        <td class="py-3.5 px-4 font-bold text-slate-800">${r.current_stock}</td>
+                        <td class="py-3.5 px-4 font-medium">${r.avg_daily_demand} / d</td>
+                        <td class="py-3.5 px-4 text-slate-600">${r.lead_time_days} days</td>
+                        <td class="py-3.5 px-4 text-slate-600 font-mono">${r.safety_stock}</td>
+                        <td class="py-3.5 px-4 font-bold text-slate-700 font-mono">${r.reorder_point}</td>
+                        <td class="py-3.5 px-4 text-slate-600 font-mono">${r.economic_order_quantity}</td>
+                        <td class="py-3.5 px-4">
+                            ${r.recommended_order_quantity > 0 
+                                ? `<span class="font-black text-blue-600 text-sm bg-blue-50 px-2 py-0.5 rounded">${r.recommended_order_quantity} units</span>`
+                                : `<span class="text-slate-400 font-semibold">0</span>`}
+                        </td>
+                        <td class="py-3.5 px-4 font-black text-slate-800">${formatINR(r.estimated_reorder_cost)}</td>
+                        <td class="py-3.5 px-4 text-center space-x-1.5">
+                            <button onclick="openMathBreakdown(${r.item_id})" title="View formula math breakdown" class="text-xs px-2 py-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium">
+                                <i class="fa-solid fa-calculator"></i> Math
+                            </button>
+                            ${r.recommended_order_quantity > 0 
+                                ? `<button onclick="quickOrder(${r.item_id}, ${r.recommended_order_quantity})" class="text-xs px-2.5 py-1 rounded bg-blue-600 hover:bg-blue-700 text-white font-bold transition shadow-xs">Order</button>`
+                                : `<span class="text-xs text-slate-400">-</span>`}
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function renderStockTable() {
+            const tbody = document.getElementById('stock-tbody');
+            if (allItems.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="10" class="py-8 text-center text-slate-400">No inventory items found. Add or upload SKUs.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = allItems.map(item => {
+                const val = (item.current_stock * item.unit_cost);
+                const fillPct = Math.min(100, Math.round((item.current_stock / item.max_stock_level) * 100));
+
+                let barColor = 'bg-blue-500';
+                if (item.current_stock <= item.min_stock_level) barColor = 'bg-red-500';
+                else if (item.current_stock > item.max_stock_level) barColor = 'bg-purple-500';
+
+                return `
+                    <tr class="hover:bg-slate-50/80 transition">
+                        <td class="py-3.5 px-4 font-mono font-bold text-slate-800">${item.sku}</td>
+                        <td class="py-3.5 px-4 font-semibold text-slate-800">${item.name}</td>
+                        <td class="py-3.5 px-4 text-xs text-slate-500"><span class="px-2 py-0.5 rounded-full bg-slate-100">${item.category}</span></td>
+                        <td class="py-3.5 px-4">
+                            <div class="flex items-center gap-2">
+                                <span class="font-bold text-slate-800">${item.current_stock}</span>
+                                <div class="w-16 bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                                    <div class="${barColor} h-1.5 rounded-full" style="width: ${fillPct}%"></div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="py-3.5 px-4 text-xs text-slate-500">${item.min_stock_level} / ${item.max_stock_level}</td>
+                        <td class="py-3.5 px-4 text-slate-600">${item.lead_time_days} days</td>
+                        <td class="py-3.5 px-4 font-mono font-bold text-slate-800">${formatINR(item.unit_cost)}</td>
+                        <td class="py-3.5 px-4 text-xs text-slate-500">H: ${(item.holding_cost_rate * 100).toFixed(0)}% | S: ${formatINR(item.ordering_cost)}</td>
+                        <td class="py-3.5 px-4 font-mono font-black text-slate-800">${formatINR(val)}</td>
+                        <td class="py-3.5 px-4 text-center space-x-1">
+                            <button onclick="openAdjustModal(${item.id}, '${item.sku}', ${item.current_stock})" class="text-xs px-2.5 py-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold">
+                                <i class="fa-solid fa-pen-to-square"></i> Adjust
+                            </button>
+                            <button onclick="deleteItem(${item.id}, '${item.sku}')" class="text-xs px-2 py-1 rounded hover:bg-red-50 text-red-600">
+                                <i class="fa-solid fa-trash-can"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function searchStockTable() {
+            const query = document.getElementById('stock-search-input').value.toLowerCase();
+            const rows = document.querySelectorAll('#stock-tbody tr');
+            rows.forEach(r => {
+                const text = r.textContent.toLowerCase();
+                r.style.display = text.includes(query) ? '' : 'none';
+            });
+        }
+
+        async function loadConsumptionView() {
+            const itemId = document.getElementById('left-sku-select').value;
+            if (!itemId) return;
+
+            try {
+                const res = await fetch(`/api/v1/consumption/items/${itemId}/metrics?days_back=90`);
+                const metrics = await res.json();
+
+                document.getElementById('s2-mean-demand').textContent = `${metrics.average_daily_demand} units`;
+                document.getElementById('s2-std-demand').textContent = `\u00B1 ${metrics.demand_standard_deviation}`;
+                document.getElementById('s2-cv-demand').textContent = `${metrics.coefficient_of_variation}`;
+                
+                const cvLabel = metrics.coefficient_of_variation < 0.5 ? 'Low Volatility (Smooth)' : metrics.coefficient_of_variation < 1.0 ? 'Moderate Volatility' : 'High Volatility (Lumpy)';
+                document.getElementById('s2-cv-label').textContent = cvLabel;
+
+                document.getElementById('consumption-total-label').textContent = `Total Outflow: ${metrics.total_quantity_consumed} units`;
+
+                // Render Chart
+                const labels = metrics.recent_history.map(p => p.date);
+                const data = metrics.recent_history.map(p => p.quantity);
+
+                const ctx = document.getElementById('consumptionChart').getContext('2d');
+                if (consumptionChartInstance) consumptionChartInstance.destroy();
+
+                consumptionChartInstance = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Daily Sales Outflow',
+                            data: data,
+                            backgroundColor: 'rgba(59, 130, 246, 0.85)',
+                            hoverBackgroundColor: 'rgba(37, 99, 235, 1)',
+                            borderRadius: 4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            y: { beginAtZero: true, grid: { color: '#f1f5f9' }, title: { display: true, text: 'Units' } },
+                            x: { grid: { display: false } }
+                        }
+                    }
+                });
+
+                // Load recent history logs
+                const resHist = await fetch(`/api/v1/consumption/items/${itemId}/history`);
+                const historyData = await resHist.json();
+                const listEl = document.getElementById('recent-transactions-list');
+
+                if (historyData.length === 0) {
+                    listEl.innerHTML = `<p class="text-xs text-slate-400 py-4 text-center">No sales logged yet.</p>`;
+                } else {
+                    const recentEntries = historyData.slice(-8).reverse();
+                    listEl.innerHTML = recentEntries.map(e => `
+                        <div class="py-2.5 flex items-center justify-between text-xs">
+                            <div>
+                                <span class="font-bold text-slate-800">${e.transaction_date}</span>
+                                <span class="text-[11px] text-slate-500 ml-1">via ${e.channel}</span>
+                            </div>
+                            <span class="font-mono font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded">${e.quantity} units</span>
+                        </div>
+                    `).join('');
+                }
+
+            } catch (err) {
+                showToast("Error loading demand analytics: " + err.message, "error");
+            }
+        }
+
+        async function runForecastView() {
+            const itemId = document.getElementById('left-sku-select').value;
+            const modelType = document.getElementById('left-model-select').value;
+            const horizon = parseInt(document.getElementById('left-horizon-select').value);
+
+            if (!itemId) return;
+
+            try {
+                const res = await fetch(`/api/v1/forecast/items/${itemId}?save_snapshot=false`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        horizon_days: horizon,
+                        model_type: modelType
+                    })
+                });
+                const f = await res.json();
+
+                document.getElementById('f-model-used').textContent = f.model_name.replace(/_/g, ' ').toUpperCase();
+                document.getElementById('f-mae').textContent = f.metrics.mae;
+                document.getElementById('f-rmse').textContent = f.metrics.rmse;
+                document.getElementById('f-daily-mean').textContent = `${f.daily_forecasted_mean} / day`;
+                document.getElementById('forecast-total-demand').textContent = `Total Forecast: ${f.total_forecasted_demand} units over ${f.horizon_days}d`;
+
+                // Render Model Comparison Cards
+                const compGrid = document.getElementById('model-comparison-grid');
+                if (f.comparison_summary) {
+                    compGrid.innerHTML = Object.entries(f.comparison_summary).map(([name, mae]) => {
+                        const isSelected = name === f.model_name;
+                        return `
+                            <div class="p-3 rounded-lg border ${isSelected ? 'border-blue-500 bg-blue-50/50' : 'border-slate-200 bg-slate-50'}">
+                                <div class="flex items-center justify-between">
+                                    <span class="text-[10px] font-bold uppercase text-slate-500 truncate">${name.replace(/_/g, ' ')}</span>
+                                    ${isSelected ? '<span class="text-[9px] bg-blue-600 text-white font-bold px-1.5 rounded">WINNER</span>' : ''}
+                                </div>
+                                <div class="text-sm font-black text-slate-800 mt-1">MAE: ${mae.toFixed(2)}</div>
+                            </div>
+                        `;
+                    }).join('');
+                }
+
+                // Render Unified Historical + Forecast Chart
+                const histPoints = f.historical_points || [];
+                const predPoints = f.daily_predictions;
+
+                const allLabels = [
+                    ...histPoints.map(p => p.date),
+                    ...predPoints.map(p => p.date)
+                ];
+
+                const histData = [
+                    ...histPoints.map(p => p.quantity),
+                    ...Array(predPoints.length).fill(null)
+                ];
+
+                const lastHistVal = histPoints.length > 0 ? histPoints[histPoints.length - 1].quantity : null;
+                
+                const predData = [
+                    ...Array(Math.max(0, histPoints.length - 1)).fill(null),
+                    lastHistVal,
+                    ...predPoints.map(p => p.predicted_quantity)
+                ];
+
+                const uppers = [
+                    ...Array(Math.max(0, histPoints.length - 1)).fill(null),
+                    lastHistVal,
+                    ...predPoints.map(p => p.upper_bound)
+                ];
+
+                const lowers = [
+                    ...Array(Math.max(0, histPoints.length - 1)).fill(null),
+                    lastHistVal,
+                    ...predPoints.map(p => p.lower_bound)
+                ];
+
+                const ctx = document.getElementById('forecastChart').getContext('2d');
+                if (forecastChartInstance) forecastChartInstance.destroy();
+
+                forecastChartInstance = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: allLabels,
+                        datasets: [
+                            {
+                                label: 'Historical Sales',
+                                data: histData,
+                                borderColor: '#64748b',
+                                backgroundColor: 'transparent',
+                                borderDash: [4, 4],
+                                tension: 0.15,
+                                pointRadius: 2
+                            },
+                            {
+                                label: 'Forecast Projection',
+                                data: predData,
+                                borderColor: '#2563eb',
+                                backgroundColor: '#2563eb',
+                                borderWidth: 3,
+                                tension: 0.2,
+                                pointRadius: 4
+                            },
+                            {
+                                label: '95% Upper Bound',
+                                data: uppers,
+                                borderColor: 'rgba(59, 130, 246, 0.3)',
+                                borderDash: [5, 5],
+                                fill: false,
+                                pointRadius: 0
+                            },
+                            {
+                                label: '95% Lower Bound',
+                                data: lowers,
+                                borderColor: 'rgba(59, 130, 246, 0.3)',
+                                borderDash: [5, 5],
+                                fill: '-1',
+                                backgroundColor: 'rgba(59, 130, 246, 0.08)',
+                                pointRadius: 0
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: { mode: 'index', intersect: false },
+                        scales: {
+                            y: { beginAtZero: true, grid: { color: '#f1f5f9' }, title: { display: true, text: 'Units' } },
+                            x: { grid: { display: false } }
+                        }
+                    }
+                });
+
+            } catch (err) {
+                showToast("Error generating forecast: " + err.message, "error");
+            }
+        }
+
+        // Quick Order Action
+        async function quickOrder(itemId, quantity) {
+            try {
+                const res = await fetch('/api/v1/recommendations/create-po', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        items: [{item_id: itemId, quantity: quantity}],
+                        fulfill_immediately: true,
+                        supplier_notes: 'Replenishment order from Stage 4 recommendation'
+                    })
+                });
+                const data = await res.json();
+                showToast(`Order for ${quantity} units placed & restocked! PO #${data.po_number} (${formatINR(data.total_order_cost)})`);
+                await triggerPipelineRun();
+            } catch (err) {
+                showToast("Order failed: " + err.message, "error");
+            }
+        }
+
+        // Math Breakdown Modal
+        function openMathBreakdown(itemId) {
+            const rec = allRecommendations.find(r => r.item_id === itemId);
+            if (!rec) return;
+
+            document.getElementById('math-sku-title').textContent = `Calculation Breakdown: ${rec.sku}`;
+            document.getElementById('math-content').innerHTML = `
+                <div class="bg-slate-50 p-3 rounded-lg border border-slate-200 space-y-1">
+                    <span class="font-bold text-slate-800">1. Lead Time Demand (LTD):</span>
+                    <p class="font-mono text-[11px] text-blue-700">LTD = Daily Forecast (${rec.forecast_daily_mean}) &times; Lead Time (${rec.lead_time_days} days) = <strong>${rec.lead_time_demand} units</strong></p>
+                </div>
+                <div class="bg-slate-50 p-3 rounded-lg border border-slate-200 space-y-1">
+                    <span class="font-bold text-slate-800">2. Dynamic Safety Stock (SS):</span>
+                    <p class="font-mono text-[11px] text-blue-700">SS = Z &times; &sigma;<sub>d</sub> (${rec.demand_std_dev}) &times; &radic;(${rec.lead_time_days}) = <strong>${rec.safety_stock} units</strong></p>
+                </div>
+                <div class="bg-slate-50 p-3 rounded-lg border border-slate-200 space-y-1">
+                    <span class="font-bold text-slate-800">3. Reorder Point (ROP):</span>
+                    <p class="font-mono text-[11px] text-blue-700">ROP = LTD (${rec.lead_time_demand}) + SS (${rec.safety_stock}) = <strong>${rec.reorder_point} units</strong></p>
+                </div>
+                <div class="bg-slate-50 p-3 rounded-lg border border-slate-200 space-y-1">
+                    <span class="font-bold text-slate-800">4. Economic Order Quantity (EOQ):</span>
+                    <p class="font-mono text-[11px] text-blue-700">EOQ = &radic;(2 &times; Annual Demand &times; S / H) = <strong>${rec.economic_order_quantity} units</strong></p>
+                </div>
+                <div class="bg-slate-50 p-3 rounded-lg border border-slate-200 space-y-1">
+                    <span class="font-bold text-slate-800">5. Unit Valuation & Capital:</span>
+                    <p class="font-mono text-[11px] text-emerald-700">Unit Cost = ${formatINR(rec.unit_cost)} | Estimated Investment = <strong>${formatINR(rec.estimated_reorder_cost)}</strong></p>
+                </div>
+                <div class="bg-blue-50 p-3 rounded-lg border border-blue-200 text-blue-900">
+                    <strong>Decision Rationale:</strong><br>${rec.rationale}
+                </div>
+            `;
+            document.getElementById('mathModal').classList.remove('hidden');
+        }
+        function closeMathModal() { document.getElementById('mathModal').classList.add('hidden'); }
+
+        // Purchase Order Modal Handlers
+        function openCreatePOModal() {
+            const urgentItems = allRecommendations.filter(r => r.recommended_order_quantity > 0);
+            const previewEl = document.getElementById('po-items-preview');
+
+            if (urgentItems.length === 0) {
+                previewEl.innerHTML = `<p class="p-6 text-center text-slate-400 text-xs">All inventory items are currently healthy! No replenishment required.</p>`;
+                document.getElementById('po-total-cost').textContent = '₹0.00';
+            } else {
+                let totalCost = 0;
+                previewEl.innerHTML = urgentItems.map(item => {
+                    totalCost += item.estimated_reorder_cost;
+                    return `
+                        <div class="p-3.5 flex items-center justify-between text-xs">
+                            <div>
+                                <span class="font-bold text-slate-800">${item.sku}</span>
+                                <span class="text-slate-500 ml-1.5">${item.item_name}</span>
+                                <div class="text-[11px] text-slate-400">Current: ${item.current_stock} | Unit: ${formatINR(item.unit_cost)} | Lead Time: ${item.lead_time_days}d</div>
+                            </div>
+                            <div class="text-right">
+                                <span class="font-bold text-blue-600 font-mono">${item.recommended_order_quantity} units</span>
+                                <div class="text-slate-800 font-bold">${formatINR(item.estimated_reorder_cost)}</div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+                document.getElementById('po-total-cost').textContent = formatINR(totalCost);
+            }
+
+            document.getElementById('createPOModal').classList.remove('hidden');
+        }
+        function closeCreatePOModal() { document.getElementById('createPOModal').classList.add('hidden'); }
+
+        async function submitPurchaseOrder() {
+            const urgentItems = allRecommendations.filter(r => r.recommended_order_quantity > 0);
+            if (urgentItems.length === 0) {
+                showToast("No items require replenishment.", "info");
+                closeCreatePOModal();
+                return;
+            }
+
+            const fulfillImmediately = document.getElementById('po-fulfill-checkbox').checked;
+            const payload = {
+                items: urgentItems.map(i => ({item_id: i.item_id, quantity: i.recommended_order_quantity})),
+                fulfill_immediately: fulfillImmediately,
+                supplier_notes: 'Batch replenishment approval via Stage 4 recommendations'
+            };
+
+            try {
+                const res = await fetch('/api/v1/recommendations/create-po', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                closeCreatePOModal();
+                showToast(`${data.message} Total: ${formatINR(data.total_order_cost)}`, "success");
+                await triggerPipelineRun();
+            } catch (err) {
+                showToast("Error creating PO: " + err.message, "error");
+            }
+        }
+
+        // Modal Handlers
+        function openAddItemModal() { document.getElementById('addItemModal').classList.remove('hidden'); }
+        function closeAddItemModal() { document.getElementById('addItemModal').classList.add('hidden'); }
+
+        async function handleCreateItem(e) {
+            e.preventDefault();
+            const payload = {
+                sku: document.getElementById('m_sku').value.trim(),
+                name: document.getElementById('m_name').value.trim(),
+                category: document.getElementById('m_category').value.trim() || 'General',
+                current_stock: parseInt(document.getElementById('m_stock').value),
+                min_stock_level: parseInt(document.getElementById('m_min_stock').value),
+                max_stock_level: parseInt(document.getElementById('m_max_stock').value),
+                lead_time_days: parseInt(document.getElementById('m_lead_time').value),
+                unit_cost: parseFloat(document.getElementById('m_unit_cost').value),
+                ordering_cost: parseFloat(document.getElementById('m_order_cost').value),
+                holding_cost_rate: 0.20
+            };
+
+            try {
+                const res = await fetch('/api/v1/stock/items', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(payload)
+                });
+                if (res.ok) {
+                    closeAddItemModal();
+                    showToast(`SKU ${payload.sku} created successfully with unit cost ${formatINR(payload.unit_cost)}!`);
+                    await triggerPipelineRun();
+                } else {
+                    const err = await res.json();
+                    showToast(err.detail || "Failed to create item.", "error");
+                }
+            } catch (err) {
+                showToast("Error: " + err.message, "error");
+            }
+        }
+
+        function openAdjustModal(id, sku, current) {
+            document.getElementById('adj_item_id').value = id;
+            document.getElementById('adj_item_label').textContent = `SKU: ${sku} (Current on-hand: ${current})`;
+            document.getElementById('adjustStockModal').classList.remove('hidden');
+        }
+        function closeAdjustModal() { document.getElementById('adjustStockModal').classList.add('hidden'); }
+
+        async function handleAdjustStock(e) {
+            e.preventDefault();
+            const id = document.getElementById('adj_item_id').value;
+            const change = parseInt(document.getElementById('adj_quantity').value);
+            const reason = document.getElementById('adj_reason').value;
+
+            try {
+                const res = await fetch(`/api/v1/stock/items/${id}/adjust`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({quantity_change: change, reason: reason})
+                });
+                if (res.ok) {
+                    closeAdjustModal();
+                    showToast("Stock level successfully adjusted.");
+                    await triggerPipelineRun();
+                } else {
+                    const err = await res.json();
+                    showToast(err.detail || "Failed to adjust stock.", "error");
+                }
+            } catch (err) {
+                showToast("Error: " + err.message, "error");
+            }
+        }
+
+        async function deleteItem(id, sku) {
+            if (!confirm(`Are you sure you want to delete SKU ${sku}?`)) return;
+            try {
+                const res = await fetch(`/api/v1/stock/items/${id}`, { method: 'DELETE' });
+                if (res.ok) {
+                    showToast(`SKU ${sku} deleted.`);
+                    await triggerPipelineRun();
+                }
+            } catch (err) {
+                showToast("Delete failed: " + err.message, "error");
+            }
+        }
+
+        // Sale Modal Handlers
+        function openLogSaleModal() { document.getElementById('logSaleModal').classList.remove('hidden'); }
+        function closeLogSaleModal() { document.getElementById('logSaleModal').classList.add('hidden'); }
+
+        async function handleLogSale(e) {
+            e.preventDefault();
+            const itemId = document.getElementById('left-sku-select').value;
+            const payload = {
+                transaction_date: document.getElementById('sale_date').value,
+                quantity: parseInt(document.getElementById('sale_quantity').value),
+                channel: document.getElementById('sale_channel').value
+            };
+
+            try {
+                const res = await fetch(`/api/v1/consumption/items/${itemId}`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(payload)
+                });
+                if (res.ok) {
+                    closeLogSaleModal();
+                    showToast("Sales outflow logged successfully!");
+                    await loadConsumptionView();
+                    await triggerPipelineRun();
+                } else {
+                    const err = await res.json();
+                    showToast(err.detail || "Failed to log sale.", "error");
+                }
+            } catch (err) {
+                showToast("Error: " + err.message, "error");
+            }
+        }
+    </script>
+</body>
+</html>

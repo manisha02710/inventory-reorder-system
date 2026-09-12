@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Login - StockPredictAI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-100 h-screen flex items-center justify-center">
+    <div class="bg-white p-8 rounded-2xl shadow-xl w-96">
+        <h2 class="text-2xl font-black text-slate-800 mb-6 text-center">StockPredict<span class="text-blue-600">AI</span></h2>
+        <form id="loginForm" class="space-y-4">
+            <div>
+                <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Mail ID</label>
+                <input type="email" name="email" required class="w-full border border-slate-200 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+            </div>
+            <div>
+                <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Password</label>
+                <input type="password" name="password" required class="w-full border border-slate-200 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+            </div>
+            <button type="submit" class="w-full py-3 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition">Log In</button>
+        </form>
+        <p id="error" class="text-red-500 text-xs mt-4 text-center hidden"></p>
+    </div>
+
+    <script>
+        function login (){
+            window.location.href="index.html";
+        }
+        document.getElementById('loginForm').onsubmit = async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const res = await fetch('/auth/login', { method: 'POST', body: formData });
+            if (res.ok) {
+                window.location.href = '/';
+            } else {
+                const data = await res.json();
+                document.getElementById('error').textContent = data.detail;
+                document.getElementById('error').classList.remove('hidden');
+            }
+        };
+    </script>
+</body>
+</html>
