@@ -101,9 +101,13 @@ app.include_router(api_v1_router)
 @app.get("/", response_class=HTMLResponse, tags=["Dashboard"], include_in_schema=False)
 async def serve_dashboard(request: Request, user=Depends(get_current_user_from_cookie)):
     """Interactive visual dashboard for all 4 stages of inventory reordering."""
-    if not user:
-        return RedirectResponse(url="/login")
-    return templates.TemplateResponse(request=request, name="index.html", context={"app_name": settings.APP_NAME, "user": user})
+    current_user = user if user else "Guest Viewer"
+    is_guest = bool(not user or user == "Guest Viewer")
+    return templates.TemplateResponse(
+        request=request, 
+        name="index.html", 
+        context={"app_name": settings.APP_NAME, "user": current_user, "is_guest": is_guest}
+    )
 
 
 @app.get("/login", response_class=HTMLResponse, tags=["Auth"], include_in_schema=False)
