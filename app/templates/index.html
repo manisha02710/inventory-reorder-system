@@ -5,40 +5,145 @@
 
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <script>
-document.getElementById('loginForm').addEventListener('submit', function(e) {
-    e.preventDefault();
-
-    const email = document.querySelector('input[name="email"]').value;
-    const password = document.querySelector('input[name="password"]').value;
-
-    if (email && password) {
-        window.location.href = "index.html";
-    }
-});
-</script>
     <title>Inventory Reorder Intelligence System (FastAPI)</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Chart.js CDN -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        if (window.Chart) {
+            Chart.defaults.color = '#94a3b8';
+            Chart.defaults.borderColor = 'rgba(255, 255, 255, 0.08)';
+        }
+    </script>
     <!-- FontAwesome icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
+        :root {
+            color-scheme: dark;
+        }
+        body {
+            background-color: #0b0f19 !important;
+            color: #f1f5f9 !important;
+        }
+        header {
+            background-color: #0f172a !important;
+            border-color: #1e293b !important;
+        }
+        .bg-white {
+            background-color: #111827 !important;
+            color: #f1f5f9 !important;
+        }
+        .bg-slate-50 {
+            background-color: #0f172a !important;
+            color: #cbd5e1 !important;
+        }
+        .bg-slate-100 {
+            background-color: #1e293b !important;
+            color: #cbd5e1 !important;
+        }
+        .bg-slate-200 {
+            background-color: #334155 !important;
+        }
+        /* Borders */
+        .border-slate-100, .border-slate-200, .border-slate-300 {
+            border-color: #1e293b !important;
+        }
+        .divide-slate-100 > :not([hidden]) ~ :not([hidden]),
+        .divide-slate-200 > :not([hidden]) ~ :not([hidden]) {
+            border-color: #1e293b !important;
+        }
+        /* Text Colors */
+        .text-slate-900, .text-slate-800 {
+            color: #f8fafc !important;
+        }
+        .text-slate-700, .text-slate-600 {
+            color: #cbd5e1 !important;
+        }
+        .text-slate-500 {
+            color: #94a3b8 !important;
+        }
+        .text-slate-400 {
+            color: #64748b !important;
+        }
+        /* Form Controls & Inputs */
+        input, select, textarea {
+            background-color: #1e293b !important;
+            border-color: #334155 !important;
+            color: #f8fafc !important;
+        }
+        input:focus, select:focus, textarea:focus {
+            border-color: #3b82f6 !important;
+            outline: none !important;
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3) !important;
+        }
+        input::placeholder {
+            color: #64748b !important;
+        }
+        /* Active Stage Tab */
         .stage-active {
-            border-color: #2563eb !important;
-            color: #1d4ed8 !important;
-            background-color: #eff6ff !important;
+            border-color: #3b82f6 !important;
+            color: #60a5fa !important;
+            background-color: rgba(30, 58, 138, 0.3) !important;
             font-weight: 700 !important;
+        }
+        /* Badges & Accents in Dark Mode */
+        .bg-blue-50, .bg-blue-100 {
+            background-color: rgba(30, 58, 138, 0.35) !important;
+            color: #93c5fd !important;
+            border-color: rgba(59, 130, 246, 0.3) !important;
+        }
+        .bg-emerald-50, .bg-emerald-100 {
+            background-color: rgba(6, 78, 59, 0.35) !important;
+            color: #6ee7b7 !important;
+            border-color: rgba(16, 185, 129, 0.3) !important;
+        }
+        .bg-amber-50, .bg-amber-100 {
+            background-color: rgba(120, 53, 15, 0.35) !important;
+            color: #fcd34d !important;
+            border-color: rgba(245, 158, 11, 0.3) !important;
+        }
+        .bg-rose-50, .bg-rose-100 {
+            background-color: rgba(136, 19, 55, 0.35) !important;
+            color: #fda4af !important;
+            border-color: rgba(244, 63, 94, 0.3) !important;
+        }
+        .bg-purple-50, .bg-purple-100 {
+            background-color: rgba(88, 28, 135, 0.35) !important;
+            color: #d8b4fe !important;
+            border-color: rgba(168, 85, 247, 0.3) !important;
+        }
+        /* Table Styling */
+        table thead th {
+            background-color: #1e293b !important;
+            color: #94a3b8 !important;
+            border-color: #334155 !important;
+        }
+        table tbody tr {
+            background-color: #111827 !important;
+            border-color: #1e293b !important;
+        }
+        table tbody tr:hover {
+            background-color: #1e293b !important;
+        }
+        table tbody td {
+            color: #e2e8f0 !important;
+            border-color: #1e293b !important;
+        }
+        /* Modals & Overlays */
+        .fixed.inset-0.bg-slate-900\/50,
+        .fixed.inset-0.bg-black\/50 {
+            background-color: rgba(3, 7, 18, 0.8) !important;
+            backdrop-filter: blur(6px) !important;
         }
         /* Custom scrollbar */
         ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: #f1f5f9; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        ::-webkit-scrollbar-track { background: #0b0f19; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
     </style>
 </head>
-<body class="bg-slate-100 text-slate-900 min-h-screen font-sans antialiased flex flex-col">
+<body class="bg-[#0b0f19] text-slate-100 min-h-screen font-sans antialiased flex flex-col">
     
     <!-- Toast Notification Container -->
     <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none"></div>
@@ -70,6 +175,15 @@ document.getElementById('loginForm').addEventListener('submit', function(e) {
                 <button onclick="triggerPipelineRun()" id="btn-run-pipeline-top" class="text-xs font-bold px-3.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white transition shadow-xs flex items-center gap-1.5">
                     <i class="fa-solid fa-arrows-rotate"></i> Run Pipeline
                 </button>
+                <div class="h-4 w-px bg-slate-700 mx-1"></div>
+                <div class="flex items-center gap-2">
+                    <div class="w-7 h-7 rounded-full bg-blue-900/60 border border-blue-700/50 flex items-center justify-center text-[11px] font-bold text-blue-300" title="Logged in as Admin">
+                        <i class="fa-solid fa-user"></i>
+                    </div>
+                    <a href="/auth/logout" title="Sign Out" class="text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-rose-900/50 hover:text-rose-300 text-slate-300 border border-slate-700 transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-arrow-right-from-bracket text-[11px]"></i> Logout
+                    </a>
+                </div>
             </div>
         </div>
     </header>

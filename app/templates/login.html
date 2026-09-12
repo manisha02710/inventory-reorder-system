@@ -1,41 +1,97 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - StockPredictAI</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            background-color: #0b0f19;
+            color: #f1f5f9;
+        }
+    </style>
 </head>
-<body class="bg-slate-100 h-screen flex items-center justify-center">
-    <div class="bg-white p-8 rounded-2xl shadow-xl w-96">
-        <h2 class="text-2xl font-black text-slate-800 mb-6 text-center">StockPredict<span class="text-blue-600">AI</span></h2>
-        <form id="loginForm" class="space-y-4">
-            <div>
-                <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Mail ID</label>
-                <input type="email" name="email" required class="w-full border border-slate-200 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+<body class="bg-[#0b0f19] text-slate-100 min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
+    <!-- Ambient Background Glows -->
+    <div class="absolute -top-40 -left-40 w-96 h-96 bg-blue-600/15 rounded-full blur-3xl pointer-events-none"></div>
+    <div class="absolute -bottom-40 -right-40 w-96 h-96 bg-indigo-600/15 rounded-full blur-3xl pointer-events-none"></div>
+
+    <div class="bg-slate-900/90 backdrop-blur-xl p-8 sm:p-10 rounded-3xl shadow-2xl border border-slate-800 w-full max-w-md relative z-10">
+        <div class="text-center mb-8">
+            <div class="w-14 h-14 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white text-2xl font-bold shadow-lg shadow-blue-500/20 mx-auto mb-4">
+                <i class="fa-solid fa-boxes-stacked"></i>
             </div>
+            <h1 class="text-2xl sm:text-3xl font-black text-white tracking-tight">StockPredict<span class="text-blue-500">AI</span></h1>
+            <p class="text-xs text-slate-400 mt-1">Inventory Reorder Intelligence & Demand Forecasting</p>
+        </div>
+
+        <form id="loginForm" class="space-y-5">
             <div>
-                <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Password</label>
-                <input type="password" name="password" required class="w-full border border-slate-200 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Email Address</label>
+                <div class="relative">
+                    <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-500">
+                        <i class="fa-solid fa-envelope text-sm"></i>
+                    </span>
+                    <input type="email" name="email" value="admin@example.com" required
+                        class="w-full bg-slate-800/90 border border-slate-700/80 rounded-xl pl-10 pr-4 py-3 text-sm text-white placeholder-slate-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition">
+                </div>
             </div>
-            <button type="submit" class="w-full py-3 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition">Log In</button>
+
+            <div>
+                <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Password</label>
+                <div class="relative">
+                    <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-500">
+                        <i class="fa-solid fa-lock text-sm"></i>
+                    </span>
+                    <input type="password" name="password" value="admin123" required
+                        class="w-full bg-slate-800/90 border border-slate-700/80 rounded-xl pl-10 pr-4 py-3 text-sm text-white placeholder-slate-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition">
+                </div>
+            </div>
+
+            <button type="submit" id="submitBtn"
+                class="w-full py-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold rounded-xl shadow-lg shadow-blue-500/25 transition transform active:scale-98 flex items-center justify-center gap-2">
+                <span>Sign In to Dashboard</span>
+                <i class="fa-solid fa-arrow-right text-xs"></i>
+            </button>
         </form>
-        <p id="error" class="text-red-500 text-xs mt-4 text-center hidden"></p>
+
+        <div id="error" class="hidden mt-4 p-3 bg-rose-950/60 border border-rose-800/60 rounded-xl text-rose-300 text-xs text-center"></div>
+
+        <div class="mt-8 pt-6 border-t border-slate-800 text-center">
+            <span class="text-[11px] text-slate-500">Default Credentials: </span>
+            <code class="text-[11px] text-blue-400 font-mono bg-blue-950/60 px-2 py-0.5 rounded border border-blue-900/50">admin@example.com</code>
+            <span class="text-[11px] text-slate-500"> / </span>
+            <code class="text-[11px] text-blue-400 font-mono bg-blue-950/60 px-2 py-0.5 rounded border border-blue-900/50">admin123</code>
+        </div>
     </div>
 
     <script>
-        function login (){
-            window.location.href="index.html";
-        }
         document.getElementById('loginForm').onsubmit = async (e) => {
             e.preventDefault();
-            const formData = new FormData(e.target);
-            const res = await fetch('/auth/login', { method: 'POST', body: formData });
-            if (res.ok) {
-                window.location.href = '/';
-            } else {
-                const data = await res.json();
-                document.getElementById('error').textContent = data.detail;
-                document.getElementById('error').classList.remove('hidden');
+            const btn = document.getElementById('submitBtn');
+            const errEl = document.getElementById('error');
+            errEl.classList.add('hidden');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Signing in...';
+
+            try {
+                const formData = new FormData(e.target);
+                const res = await fetch('/auth/login', { method: 'POST', body: formData });
+                if (res.ok) {
+                    window.location.href = '/';
+                } else {
+                    const data = await res.json();
+                    errEl.textContent = data.detail || "Incorrect email or password";
+                    errEl.classList.remove('hidden');
+                }
+            } catch (err) {
+                errEl.textContent = "Network error. Please try again.";
+                errEl.classList.remove('hidden');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<span>Sign In to Dashboard</span><i class="fa-solid fa-arrow-right text-xs"></i>';
             }
         };
     </script>
