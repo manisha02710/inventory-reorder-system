@@ -7,14 +7,6 @@ from app.auth import verify_password, create_access_token, get_password_hash
 router = APIRouter()
 
 
-@router.post("/guest")
-def guest_login(response: Response):
-    """Instant 1-click guest login for evaluators and visitors without passwords."""
-    token = create_access_token(data={"sub": "Guest Viewer"})
-    response.set_cookie(key="access_token", value=f"Bearer {token}", httponly=True)
-    return {"message": "success", "user": "Guest Viewer"}
-
-
 @router.post("/register")
 def register(
     response: Response,
